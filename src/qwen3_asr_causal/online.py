@@ -33,18 +33,53 @@ from .types import ASRToken, Transcript
 
 logger = logging.getLogger(__name__)
 
+_AVG_WORDS_PER_SECOND = 2.4
+_DECODE_OVERHEAD_SECONDS = 0.3
+
+
+def estimate_commit_lag_seconds(
+    *,
+    chunk_sec: float,
+    hold_back_words: int,
+    stable_iterations: int,
+    right_context_sec: float = 0.0,
+) -> float:
+    """Expected distance between the audio head and a word being committed.
+
+    Structural model validated against the 21-file MCIF per-word replay
+    (2026-07-07): holdback words at ~2.4 words/s, plus one extra decode
+    cadence per additional stability iteration, plus half a cadence of
+    phase, plus decode time and any right context. Predicted/measured p50:
+    6w/2it 5.68/5.89 s, 6w/1it 3.76/3.98 s, 2w/1it 2.09/2.13 s.
+    """
+    return (
+        hold_back_words / _AVG_WORDS_PER_SECOND
+        + chunk_sec * max(0, stable_iterations - 1)
+        + chunk_sec / 2.0
+        + _DECODE_OVERHEAD_SECONDS
+        + right_context_sec
+    )
+
 
 class Qwen3StreamingOnlineProcessor:
     SAMPLING_RATE = 16_000
     _PACING = 1.2
-    # Average distance between the committed frontier and the audio head:
-    # right context (0.64s) plus the stable-commit holdback (~6 words).
-    _COMMIT_LAG_SECONDS = 2.5
     _MIN_WORD_SECONDS = 0.05
 
     def __init__(self, asr, logfile=sys.stderr):
         self.asr = asr
         self.logfile = logfile
+        # Used to back-date committed-word timestamps; must track the commit
+        # policy or word timing skews with it. The windowed backend keeps its
+        # historical constant (its hypotheses churn differently).
+        if getattr(asr, "audio_backend", "windowed") == "causal":
+            self._commit_lag_seconds = estimate_commit_lag_seconds(
+                chunk_sec=float(getattr(asr, "chunk_sec", 2.0)),
+                hold_back_words=int(getattr(asr, "hold_back_words", 6)),
+                stable_iterations=int(getattr(asr, "stable_iterations", 1)),
+            )
+        else:
+            self._commit_lag_seconds = 2.5
         session_language = getattr(asr, "_session_language", None)
         self._language = session_language or asr.original_language
         self._detected_language = (
@@ -224,7 +259,7 @@ class Qwen3StreamingOnlineProcessor:
             return []
 
         t0 = self._last_commit_time
-        t1 = event_time if flush else event_time - self._COMMIT_LAG_SECONDS
+        t1 = event_time if flush else event_time - self._commit_lag_seconds
         t1 = min(max(t1, t0 + self._MIN_WORD_SECONDS * len(new_words)), self.end)
         if t1 <= t0:
             t1 = min(t0 + self._MIN_WORD_SECONDS * len(new_words), self.end)

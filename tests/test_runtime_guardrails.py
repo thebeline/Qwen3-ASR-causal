@@ -73,6 +73,20 @@ def test_event_history_unbounded_is_opt_in():
     assert len(streamer.events) == 80
 
 
+def test_commit_lag_estimate_matches_measured_p50():
+    from qwen3_asr_causal.online import estimate_commit_lag_seconds
+
+    # Measured per-word p50 on the 21-file MCIF replay (chunk 1.92 s):
+    # 6w/2it 5.89 s, 6w/1it 3.98 s, 2w/1it 2.13 s.
+    for hold, stable, measured in ((6, 2, 5.89), (6, 1, 3.98), (2, 1, 2.13)):
+        estimate = estimate_commit_lag_seconds(
+            chunk_sec=1.92,
+            hold_back_words=hold,
+            stable_iterations=stable,
+        )
+        assert abs(estimate - measured) < 0.35, (hold, stable, estimate)
+
+
 def test_default_checkpoints_are_single_sourced():
     from qwen3_asr_causal import asr as asr_module
     from qwen3_asr_causal import cli as cli_module

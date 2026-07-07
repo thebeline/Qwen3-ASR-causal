@@ -112,7 +112,18 @@ class Qwen3StreamingASR:
             kwargs.get("qwen3_streaming_segment_keep_tail_steps", 0)
         )
         self.hold_back_words = int(kwargs.get("qwen3_streaming_hold_back_words", 6))
-        self.stable_iterations = int(kwargs.get("qwen3_streaming_stable_iterations", 2))
+        # None = auto: 2 for windowed (validated byte-stable point), 1 for
+        # causal. The 21-file MCIF replay (2026-07-07) measured per-word
+        # commit latency p50 5.9 s / p95 13.6 s at stable_iterations=2 with
+        # 93% of words committed by segment rollover rather than the policy;
+        # stable_iterations=1 gives p50 4.0 s / p95 7.9 s for +0.5 point of
+        # whisper-normalized live WER (0.1830 -> 0.1878).
+        stable_iterations_setting = kwargs.get("qwen3_streaming_stable_iterations")
+        self.stable_iterations = (
+            int(stable_iterations_setting)
+            if stable_iterations_setting is not None
+            else 2
+        )
         self.max_new_tokens = int(kwargs.get("qwen3_streaming_max_new_tokens", 256))
         self.base_context = str(kwargs.get("qwen3_streaming_context", "") or "")
         self.prompt_context_words = int(
@@ -174,6 +185,8 @@ class Qwen3StreamingASR:
             self.segment_punct_rollover = True
             self.segment_roll_before_generate = True
             self.reset_encoder_on_rollover = True
+            if stable_iterations_setting is None:
+                self.stable_iterations = 1
 
         device_setting = str(kwargs.get("qwen3_streaming_device", "auto"))
         dtype_setting = str(kwargs.get("qwen3_streaming_dtype", "auto"))
