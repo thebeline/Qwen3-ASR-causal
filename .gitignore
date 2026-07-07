@@ -10,3 +10,12 @@ dist/
 .coverage
 htmlcov/
 .DS_Store
+
+# local run scratch (smoke logs, per-config replays); curated artifacts are
+# committed explicitly under benchmarks/suite/results/
+experiments/qwen3-causal/runs/latency_events_mps_v0/*.log
+experiments/qwen3-causal/runs/latency_events_mps_v0/latency_*
+experiments/qwen3-causal/runs/latency_events_mps_v0/*.smoke.*
+experiments/qwen3-causal/runs/latency_events_mps_v0/manifest.smoke.jsonl
+experiments/qwen3-causal/runs/latency_events_mps_v0/words_h*.csv
+experiments/qwen3-causal/runs/latency_events_mps_v0/sweep_stage1.jsonl
