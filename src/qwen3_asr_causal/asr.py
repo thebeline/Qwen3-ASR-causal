@@ -25,6 +25,10 @@ from .model import (
     _register_qwen3_asr_transformers,
 )
 from .config import RealtimeAudioConfig
+from .model_paths import (
+    DEFAULT_CAUSAL_TOWER_CHECKPOINT,
+    DEFAULT_QWEN3_STREAMING_MODEL,
+)
 from .streamer import (
     CachedFullHypothesisConfig,
     SegmentedCachedFullHypothesisStreamer,
@@ -33,8 +37,6 @@ from .streamer import (
 )
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_QWEN3_STREAMING_MODEL = "Qwen/Qwen3-ASR-0.6B"
 
 QWEN3_STREAMING_MODEL_MAPPING = {
     "base": DEFAULT_QWEN3_STREAMING_MODEL,
@@ -145,10 +147,12 @@ class Qwen3StreamingASR:
         self.reset_encoder_on_rollover = False
         if self.audio_backend == "causal":
             if not self.tower_checkpoint:
-                raise ValueError(
-                    "the causal audio backend requires "
-                    "--qwen3-streaming-tower-checkpoint (local .pt/.safetensors "
-                    "file, directory, or Hugging Face repo id)"
+                self.tower_checkpoint = DEFAULT_CAUSAL_TOWER_CHECKPOINT
+                logger.info(
+                    "qwen3-streaming causal: using the published tower "
+                    "checkpoint %s (override with "
+                    "--qwen3-streaming-tower-checkpoint)",
+                    self.tower_checkpoint,
                 )
             if self.left_context_sec == 12.0:
                 # Windowed CLI default; the causal tower was trained at 15 s.

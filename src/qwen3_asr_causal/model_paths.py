@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+DEFAULT_QWEN3_STREAMING_MODEL = "Qwen/Qwen3-ASR-0.6B"
+DEFAULT_CAUSAL_TOWER_CHECKPOINT = "qfuxa/qwen3-asr-0.6b-streaming"
+
 
 def resolve_model_path(reference: str) -> Path:
     """Resolve a local path or Hugging Face repo id to a local directory."""

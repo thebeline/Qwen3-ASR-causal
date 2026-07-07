@@ -20,6 +20,7 @@ This file is the promoted inference subset of
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Sequence
 
@@ -28,6 +29,8 @@ from torch import nn
 from torch.nn import functional as F
 
 from .config import RealtimeAudioConfig
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class QwenAudioSurgeryState:
@@ -1373,6 +1376,13 @@ class Qwen3ASRRealtimeQwenDecoderModel(nn.Module):
         max_consecutive_text_tokens: int,
     ) -> torch.Tensor:
         """Legacy O(T*(P+T)) loop: full re-forward per token (parity fallback)."""
+        if not getattr(self, "_warned_uncached_decode", False):
+            self._warned_uncached_decode = True
+            logger.warning(
+                "decoder KV cache is disabled: falling back to the legacy "
+                "full re-forward loop, whose per-token cost grows with the "
+                "hypothesis length. Use use_decoder_kv_cache=True for serving."
+            )
         session = self._make_control_session(
             generated=generated,
             prompt_steps=prompt_steps,

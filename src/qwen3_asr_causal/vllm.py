@@ -23,13 +23,17 @@ from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from .model_paths import (
+    DEFAULT_CAUSAL_TOWER_CHECKPOINT,
+    DEFAULT_QWEN3_STREAMING_MODEL,
+)
 from .types import ASRToken, Transcript
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_QWEN3_VLLM_MODEL = "Qwen/Qwen3-ASR-0.6B"
+DEFAULT_QWEN3_VLLM_MODEL = DEFAULT_QWEN3_STREAMING_MODEL
 DEFAULT_QWEN3_VLLM_ALIGNER_MODEL = "Qwen/Qwen3-ForcedAligner-0.6B"
-DEFAULT_QWEN3_VLLM_CAUSAL_TOWER = "qfuxa/qwen3-asr-0.6b-streaming"
+DEFAULT_QWEN3_VLLM_CAUSAL_TOWER = DEFAULT_CAUSAL_TOWER_CHECKPOINT
 
 QWEN3_VLLM_MODEL_MAPPING = {
     "base": "Qwen/Qwen3-ASR-0.6B",
@@ -1644,6 +1648,26 @@ def _resolve_audio_backend(kwargs: dict) -> str:
     return backend
 
 
+def _resolve_multiprocessing_flag(
+    kwargs: dict,
+    kwarg_name: str,
+    env_name: str,
+) -> bool:
+    """Constructor kwarg first; the legacy env var stays as a fallback."""
+    value = kwargs.get(kwarg_name)
+    if value is not None:
+        return bool(value)
+    if env_name in os.environ:
+        logger.warning(
+            "%s is deprecated; pass %s=True/False to the constructor "
+            "(or the matching CLI flag) instead",
+            env_name,
+            kwarg_name,
+        )
+        return os.environ.get(env_name, "0") == "1"
+    return False
+
+
 def _resolve_causal_decoder_backend(kwargs: dict, audio_backend: str) -> str:
     backend = str(
         kwargs.get("qwen3_vllm_causal_decoder_backend", "vllm-text") or "vllm-text"
@@ -2092,11 +2116,21 @@ class Qwen3VLLMASR:
             kwargs,
             self.audio_backend,
         )
+        self.live_multiprocessing = _resolve_multiprocessing_flag(
+            kwargs,
+            "qwen3_vllm_live_multiprocessing",
+            "WLK_QWEN3_VLLM_LIVE_MULTIPROCESSING",
+        )
+        self.aligner_multiprocessing = _resolve_multiprocessing_flag(
+            kwargs,
+            "qwen3_vllm_aligner_multiprocessing",
+            "WLK_QWEN3_VLLM_ALIGNER_MULTIPROCESSING",
+        )
         if self.audio_backend == "causal" and (
             self.causal_decoder_backend not in {"vllm-live", "vllm-text"}
             or (
                 self.causal_decoder_backend == "vllm-live"
-                and os.environ.get("WLK_QWEN3_VLLM_LIVE_MULTIPROCESSING", "0") != "1"
+                and not self.live_multiprocessing
             )
         ):
             os.environ.setdefault("VLLM_ENABLE_V1_MULTIPROCESSING", "0")
@@ -2276,12 +2310,13 @@ class Qwen3VLLMASR:
 
         logger.info("Loading Qwen3 ForcedAligner vLLM model '%s' ...", self.aligner_model_path)
         aligner_env_restore = None
-        if (
+        aligner_forces_inprocess = (
             self.audio_backend == "causal"
             and self.causal_decoder_backend == "vllm-live"
-            and os.environ.get("WLK_QWEN3_VLLM_LIVE_MULTIPROCESSING", "0") == "1"
-            and os.environ.get("WLK_QWEN3_VLLM_ALIGNER_MULTIPROCESSING", "0") != "1"
-        ):
+            and self.live_multiprocessing
+            and not self.aligner_multiprocessing
+        )
+        if aligner_forces_inprocess:
             aligner_env_restore = os.environ.get("VLLM_ENABLE_V1_MULTIPROCESSING")
             os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
         try:
@@ -2296,12 +2331,7 @@ class Qwen3VLLMASR:
         finally:
             if aligner_env_restore is not None:
                 os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = aligner_env_restore
-            elif (
-                self.audio_backend == "causal"
-                and self.causal_decoder_backend == "vllm-live"
-                and os.environ.get("WLK_QWEN3_VLLM_LIVE_MULTIPROCESSING", "0") == "1"
-                and os.environ.get("WLK_QWEN3_VLLM_ALIGNER_MULTIPROCESSING", "0") != "1"
-            ):
+            elif aligner_forces_inprocess:
                 os.environ.pop("VLLM_ENABLE_V1_MULTIPROCESSING", None)
         self.aligner_tokenizer = self.aligner_llm.get_tokenizer()
         aligner_config = AutoConfig.from_pretrained(self.aligner_model_path)

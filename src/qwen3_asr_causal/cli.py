@@ -9,6 +9,11 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from .model_paths import (
+    DEFAULT_CAUSAL_TOWER_CHECKPOINT,
+    DEFAULT_QWEN3_STREAMING_MODEL,
+)
+
 
 def _load_audio(path: Path, sample_rate: int = 16_000) -> np.ndarray:
     audio, sr = sf.read(str(path), dtype="float32", always_2d=False)
@@ -104,8 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
     transcribe_parser.add_argument("audio")
     transcribe_parser.add_argument("--backend", choices=("hf", "vllm"), default="hf")
     transcribe_parser.add_argument("--language", default="en")
-    transcribe_parser.add_argument("--model", default="Qwen/Qwen3-ASR-0.6B")
-    transcribe_parser.add_argument("--tower", default="qfuxa/qwen3-asr-0.6b-streaming")
+    transcribe_parser.add_argument("--model", default=DEFAULT_QWEN3_STREAMING_MODEL)
+    transcribe_parser.add_argument("--tower", default=DEFAULT_CAUSAL_TOWER_CHECKPOINT)
     transcribe_parser.add_argument(
         "--decoder-backend",
         choices=("vllm-live", "vllm-text", "append-kv", "rolling", "vllm"),

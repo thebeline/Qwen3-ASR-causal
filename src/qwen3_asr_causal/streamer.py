@@ -16,8 +16,9 @@ point stays byte-stable; the causal backend turns them on explicitly.
 from __future__ import annotations
 
 import time
+from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any, MutableSequence, Sequence
 
 from .stable_commit import (
     StablePrefixCommitState,
@@ -175,6 +176,10 @@ class CachedFullHypothesisConfig:
     # pass; sequential decode resumes from the first divergence. Exactly
     # faithful to the rolling path (measured: spec == roll on every chunk).
     speculative_draft: bool = False
+    # Bound the per-session decode-event history (each event holds the full
+    # hypothesis text, so an unbounded list grows for the session lifetime).
+    # 0 keeps every event (analysis/debug only, not for serving).
+    event_history_limit: int = 64
 
     def __post_init__(self) -> None:
         if self.max_new_tokens < 0:
@@ -221,7 +226,8 @@ class CachedFullHypothesisStreamer:
     text_commit_state: StableTextCommitState = field(
         default_factory=StableTextCommitState
     )
-    events: list[dict[str, Any]] = field(default_factory=list)
+    events: MutableSequence[dict[str, Any]] = field(default_factory=list)
+    events_total: int = 0
     last_hypothesis_tokens: list[int] = field(default_factory=list)
     last_hypothesis_text: str = ""
     last_display_text: str = ""
@@ -230,6 +236,11 @@ class CachedFullHypothesisStreamer:
     def __post_init__(self) -> None:
         if self.state is None:
             self.state = self.model.init_cached_audio_decode_state()
+        # Each event holds full hypothesis strings; bound the history so a
+        # long session does not grow memory for its whole lifetime.
+        limit = int(self.config.event_history_limit)
+        if limit > 0 and not isinstance(self.events, deque):
+            self.events = deque(self.events, maxlen=limit)
 
     def prompt_template_token_ids(self) -> list[int] | None:
         """Unexpanded prompt template (exactly one audio placeholder)."""
@@ -448,6 +459,7 @@ class CachedFullHypothesisStreamer:
             "candidate": candidate_text,
         }
         self.events.append(event)
+        self.events_total += 1
         return event
 
     def finalize(self, *, finalize_mode: str = "latest") -> CachedFullHypothesisFinal:

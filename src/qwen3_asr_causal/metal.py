@@ -20,13 +20,17 @@ from typing import Any, Callable, List, Tuple
 
 import numpy as np
 
+from .model_paths import (
+    DEFAULT_CAUSAL_TOWER_CHECKPOINT,
+    DEFAULT_QWEN3_STREAMING_MODEL,
+)
 from .types import ASRToken, Transcript
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_QWEN3_VLLM_METAL_MODEL = "Qwen/Qwen3-ASR-0.6B"
+DEFAULT_QWEN3_VLLM_METAL_MODEL = DEFAULT_QWEN3_STREAMING_MODEL
 QWEN3_VLLM_METAL_1_7B_MODEL = "Qwen/Qwen3-ASR-1.7B"
-DEFAULT_QWEN3_VLLM_METAL_CAUSAL_TOWER = "qfuxa/qwen3-asr-0.6b-streaming"
+DEFAULT_QWEN3_VLLM_METAL_CAUSAL_TOWER = DEFAULT_CAUSAL_TOWER_CHECKPOINT
 
 QWEN3_VLLM_METAL_MODEL_MAPPING = {
     "base": DEFAULT_QWEN3_VLLM_METAL_MODEL,
