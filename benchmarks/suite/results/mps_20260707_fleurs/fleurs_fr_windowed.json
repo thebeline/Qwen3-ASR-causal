@@ -1,0 +1,9 @@
+{
+  "language": "fr",
+  "backend": "windowed",
+  "utts": 80,
+  "audio_min": 13.0,
+  "metric": "wer",
+  "score_basic_norm": 0.0778,
+  "rtf": 0.46
+}

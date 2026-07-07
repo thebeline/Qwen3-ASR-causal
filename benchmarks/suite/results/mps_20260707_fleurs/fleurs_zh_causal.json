@@ -1,0 +1,9 @@
+{
+  "language": "zh",
+  "backend": "causal",
+  "utts": 80,
+  "audio_min": 14.8,
+  "metric": "cer",
+  "score_basic_norm": 0.8565,
+  "rtf": 0.527
+}

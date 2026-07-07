@@ -201,6 +201,21 @@ class Qwen3StreamingASR:
         if (
             self.audio_backend == "causal"
             and self.tower_checkpoint == DEFAULT_CAUSAL_TOWER_CHECKPOINT
+            and self.original_language not in ("en", "English")
+        ):
+            # FLEURS regression (benchmarks/suite/results/mps_20260707_fleurs):
+            # the EN-only distillation degraded fr 7.8->37.9, de 12.6->49.8
+            # WER and zh 11.4->85.7 CER vs the windowed backend.
+            logger.warning(
+                "qwen3-streaming causal: the published tower checkpoint is "
+                "English-only (distilled on LibriSpeech); measured quality "
+                "for language %r is severely degraded. Use the windowed "
+                "audio backend for non-English sessions.",
+                self.original_language,
+            )
+        if (
+            self.audio_backend == "causal"
+            and self.tower_checkpoint == DEFAULT_CAUSAL_TOWER_CHECKPOINT
             and "0.6" not in model_id.lower()
         ):
             # Loading the 0.6B tower into a larger model silently produced

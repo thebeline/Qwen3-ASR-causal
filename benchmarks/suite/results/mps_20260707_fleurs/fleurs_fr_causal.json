@@ -1,0 +1,9 @@
+{
+  "language": "fr",
+  "backend": "causal",
+  "utts": 80,
+  "audio_min": 13.0,
+  "metric": "wer",
+  "score_basic_norm": 0.3785,
+  "rtf": 0.522
+}

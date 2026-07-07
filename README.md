@@ -95,6 +95,12 @@ strategy made streaming; the causal tower trades ~1.4x the live windowed WER
 for 3.0x (avg) to 4.1x (peak) less compute, constant in stream age
 (`benchmarks/suite/run_flops.py`, FlopCounterMode on real weights).
 
+> **Language support**: the causal tower is **English-only** — its
+> LibriSpeech distillation degraded other languages severely (FLEURS:
+> fr 7.8→37.9, de 12.6→49.8 WER, zh 11.4→85.7 CER vs windowed; see
+> `benchmarks/suite/results/mps_20260707_fleurs/`). Use the windowed
+> backend for non-English sessions.
+
 Short-form through the same streaming stack: LibriSpeech test-clean **3.64** /
 test-other **7.16** (for reference, Voxtral Mini Realtime 3B @480 ms publishes
 2.1 / 5.5 with ~5x the parameters). At the shipped low-latency default
