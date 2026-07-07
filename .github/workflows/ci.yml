@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install (CPU torch)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu || pip install torch
+          pip install -e ".[test]"
+      - name: Compile
+        run: python -m py_compile $(find src/qwen3_asr_causal -name "*.py")
+      - name: Unit tests (fakes, no weights)
+        run: pytest -q
+
+  experiments-replay:
+    # The offline replay tooling (commit policy sweeps, latency metrology)
+    # is CPU-only and torch-free for the scripts under test here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install experiments deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest jiwer
+      - name: Replay/metrics tests
+        working-directory: experiments/qwen3-causal
+        run: |
+          pytest -q \
+            tests/test_commit_latency_from_events.py \
+            tests/test_tune_stable_commit_from_events.py \
+            tests/test_oracle_commit_from_events.py \
+            tests/test_stable_commit.py \
+            tests/test_streaming_metrics.py
