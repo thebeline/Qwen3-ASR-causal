@@ -33,3 +33,17 @@ WHISPER_TO_QWEN3_LANGUAGE = {
 }
 
 QWEN3_TO_WHISPER_LANGUAGE = {value: key for key, value in WHISPER_TO_QWEN3_LANGUAGE.items()}
+
+
+def is_cjk_char(ch: str) -> bool:
+    """CJK unified ideographs (scripts written without inter-word spaces)."""
+    code = ord(ch)
+    return (
+        0x4E00 <= code <= 0x9FFF
+        or 0x3400 <= code <= 0x4DBF
+        or 0x20000 <= code <= 0x2A6DF
+        or 0x2A700 <= code <= 0x2B73F
+        or 0x2B740 <= code <= 0x2B81F
+        or 0x2B820 <= code <= 0x2CEAF
+        or 0xF900 <= code <= 0xFAFF
+    )

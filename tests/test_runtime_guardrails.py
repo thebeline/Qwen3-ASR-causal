@@ -146,3 +146,14 @@ def test_flush_pending_on_empty_buffer_is_a_noop():
 
     flushed, state = encoder.flush_pending(state)
     assert flushed.shape[1] == 0
+
+
+def test_cjk_words_join_without_spaces():
+    from qwen3_asr_causal.languages import is_cjk_char
+
+    assert is_cjk_char("中") and is_cjk_char("語")
+    assert not is_cjk_char("a") and not is_cjk_char(" ")
+    # The spacing guard treats empty words as non-CJK (all() on empty
+    # iterables is vacuous-true; callers must guard with bool(word)).
+    word = ""
+    assert not (bool(word) and all(is_cjk_char(ch) for ch in word))

@@ -23,6 +23,7 @@ from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from .languages import is_cjk_char
 from .model_paths import (
     DEFAULT_CAUSAL_TOWER_CHECKPOINT,
     DEFAULT_QWEN3_STREAMING_MODEL,
@@ -1838,17 +1839,7 @@ def _is_kept_char(ch: str) -> bool:
     return cat.startswith("L") or cat.startswith("N")
 
 
-def _is_cjk_char(ch: str) -> bool:
-    code = ord(ch)
-    return (
-        0x4E00 <= code <= 0x9FFF
-        or 0x3400 <= code <= 0x4DBF
-        or 0x20000 <= code <= 0x2A6DF
-        or 0x2A700 <= code <= 0x2B73F
-        or 0x2B740 <= code <= 0x2B81F
-        or 0x2B820 <= code <= 0x2CEAF
-        or 0xF900 <= code <= 0xFAFF
-    )
+_is_cjk_char = is_cjk_char
 
 
 def _clean_align_token(token: str) -> str:
@@ -3321,7 +3312,12 @@ class Qwen3VLLMOnlineProcessor:
         aligned_words, detected_language = self.asr.transcribe_aligned(self.audio_buffer)
         tokens: list[ASRToken] = []
         for idx, word in enumerate(aligned_words):
-            text = word.text if idx == 0 else " " + word.text
+            # CJK scripts are written without inter-word spaces; the aligner
+            # splits them into per-character words (_split_align_words).
+            word_is_cjk = bool(word.text) and all(
+                _is_cjk_char(ch) for ch in word.text
+            )
+            text = word.text if idx == 0 or word_is_cjk else " " + word.text
             tokens.append(
                 ASRToken(
                     start=self._buffer_time_offset + word.start,

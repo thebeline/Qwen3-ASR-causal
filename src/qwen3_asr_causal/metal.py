@@ -20,6 +20,7 @@ from typing import Any, Callable, List, Tuple
 
 import numpy as np
 
+from .languages import is_cjk_char
 from .model_paths import (
     DEFAULT_CAUSAL_TOWER_CHECKPOINT,
     DEFAULT_QWEN3_STREAMING_MODEL,
@@ -1094,7 +1095,11 @@ class Qwen3VLLMMetalOnlineProcessor:
         n_total = len(words)
         for idx in range(start_idx, end_idx):
             start, end = self._time_for_word(idx, n_total)
-            text = words[idx] if idx == 0 else " " + words[idx]
+            # CJK words carry no inter-word spaces.
+            word_is_cjk = bool(words[idx]) and all(
+                is_cjk_char(ch) for ch in words[idx]
+            )
+            text = words[idx] if idx == 0 or word_is_cjk else " " + words[idx]
             tokens.append(ASRToken(start=start, end=end, text=text))
         return tokens
 
