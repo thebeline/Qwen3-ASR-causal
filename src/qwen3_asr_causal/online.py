@@ -129,9 +129,33 @@ class Qwen3StreamingOnlineProcessor:
         started = time.perf_counter()
         with self.asr.decode_lock:
             event = self.streamer.append_mel_chunk(frames.to(self.asr.device))
+            self._release_mps_allocator_cache()
         self._last_decode_duration = time.perf_counter() - started
         self._last_event = event
         return event
+
+    def _release_mps_allocator_cache(self) -> None:
+        """Return MPS cached blocks to the driver when they pile up.
+
+        Decode pacing coalesces pending audio into variable-size appends, so
+        consecutive prefills rarely share tensor shapes. The MPS caching
+        allocator buckets by shape and never releases memory on its own:
+        faster-than-realtime feeding (file transcription, catch-up) grows
+        driver memory by GBs per audio-minute while live tensors stay ~2 GB.
+        """
+        if getattr(self.asr.device, "type", "") != "mps":
+            return
+        import torch
+
+        driver = torch.mps.driver_allocated_memory()
+        allocated = torch.mps.current_allocated_memory()
+        try:
+            ceiling = float(torch.mps.recommended_max_memory())
+        except Exception:
+            ceiling = 0.0
+        threshold = max(2 * (1024**3), 0.15 * ceiling)
+        if driver > threshold and driver > 2 * allocated:
+            torch.mps.empty_cache()
 
     def _flush(self) -> List[ASRToken]:
         """Flush mel tail and right context, finalize the active segment."""
