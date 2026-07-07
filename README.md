@@ -97,7 +97,9 @@ for 3.0x (avg) to 4.1x (peak) less compute, constant in stream age
 
 Short-form through the same streaming stack: LibriSpeech test-clean **3.64** /
 test-other **7.16** (for reference, Voxtral Mini Realtime 3B @480 ms publishes
-2.1 / 5.5 with ~5x the parameters).
+2.1 / 5.5 with ~5x the parameters). At the shipped low-latency default
+(stable_iterations=1) the full test sets measure 3.67 / 7.22 — the latency
+gain is free on short-form.
 
 ## Commit latency
 
