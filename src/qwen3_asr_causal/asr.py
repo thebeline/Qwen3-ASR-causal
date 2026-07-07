@@ -198,6 +198,20 @@ class Qwen3StreamingASR:
 
         model_id = _resolve_model_id(kwargs)
         self.model_id = model_id
+        if (
+            self.audio_backend == "causal"
+            and self.tower_checkpoint == DEFAULT_CAUSAL_TOWER_CHECKPOINT
+            and "0.6" not in model_id.lower()
+        ):
+            # Loading the 0.6B tower into a larger model silently produced
+            # empty transcripts (WhisperLiveKit issue #360). Fail fast.
+            raise ValueError(
+                "the causal audio backend's published tower checkpoint "
+                f"({DEFAULT_CAUSAL_TOWER_CHECKPOINT}) is a fine-tune of the "
+                f"Qwen3-ASR-0.6B audio tower and cannot drive {model_id}. "
+                "Use the windowed audio backend for larger models, or pass "
+                "a tower checkpoint trained for this model."
+            )
 
         t = time.time()
         logger.info(
