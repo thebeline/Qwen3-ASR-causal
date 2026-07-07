@@ -7,10 +7,13 @@ describe the package as users install it.
 | script | measures | status |
 |---|---|---|
 | `run_flops.py` | measured GFLOPs per audio-second, causal vs windowed (FlopCounterMode, real tower weights) | ready |
+| `run_long_session.py` | 45-min single session: memory slope, output-rate stability, bounded event history | ready |
+| `run_concurrency.py` | N paced sessions on one shared ASR: backlog, decode busy ratio, output rate | ready |
 | `run_wer.py` | MCIF-21 + LibriSpeech WER under the live no-rewrite contract | planned |
 | `run_latency.py` | per-committed-word latency p50/p95 + time-to-first-word at 1.0x | planned |
-| `run_long_session.py` | 45-min session: memory slope, windowed-WER stability | planned |
-| `run_concurrency.py` | N concurrent sessions vs per-session latency/RTF | planned |
+
+Latest results: `results/mps_20260707_latency/` (latency frontier,
+45-min long-session verdicts, MPS concurrency).
 
 Until the consolidation lands, the offline latency/policy metrology lives in
 `experiments/qwen3-causal/scripts/commit_latency_from_events.py` (replays

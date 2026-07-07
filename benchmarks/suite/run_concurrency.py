@@ -61,6 +61,30 @@ def run_session(
     stagger_sec: float,
     out: dict,
 ) -> None:
+    try:
+        _run_session(
+            asr,
+            audio,
+            seconds=seconds,
+            feed_chunk_sec=feed_chunk_sec,
+            start_barrier=start_barrier,
+            stagger_sec=stagger_sec,
+            out=out,
+        )
+    except Exception as exc:  # noqa: BLE001 - the bench must report failures
+        out["error"] = f"{type(exc).__name__}: {exc}"
+
+
+def _run_session(
+    asr,
+    audio: np.ndarray,
+    *,
+    seconds: float,
+    feed_chunk_sec: float,
+    start_barrier: threading.Barrier,
+    stagger_sec: float,
+    out: dict,
+) -> None:
     from qwen3_asr_causal import Qwen3StreamingOnlineProcessor
 
     processor = Qwen3StreamingOnlineProcessor(asr)
@@ -147,23 +171,45 @@ def main() -> None:
         for thread in threads:
             thread.join()
         wall = time.perf_counter() - wall0
-        busy = sum(o["decode_busy_sec"] for o in outs)
+        healthy = [o for o in outs if "error" not in o and o]
+        errors = [o["error"] for o in outs if "error" in o]
         row = {
             "sessions": n_sessions,
             "wall_sec": round(wall, 1),
-            "decode_busy_ratio": round(busy / wall, 3),
-            "backlog_median_sec_worst": max(o["backlog_median_sec"] for o in outs),
-            "backlog_p95_sec_worst": max(o["backlog_p95_sec"] for o in outs),
-            "backlog_final_sec_worst": max(o["backlog_final_sec"] for o in outs),
-            "words_per_min_min": min(o["words_per_min"] for o in outs),
-            "words_per_min_median": statistics.median(
-                o["words_per_min"] for o in outs
-            ),
-            "per_session": outs,
+            "sessions_failed": len(outs) - len(healthy),
+            "errors": sorted(set(errors)),
         }
+        if healthy:
+            busy = sum(o["decode_busy_sec"] for o in healthy)
+            row.update(
+                {
+                    "decode_busy_ratio": round(busy / wall, 3),
+                    "backlog_median_sec_worst": max(
+                        o["backlog_median_sec"] for o in healthy
+                    ),
+                    "backlog_p95_sec_worst": max(
+                        o["backlog_p95_sec"] for o in healthy
+                    ),
+                    "backlog_final_sec_worst": max(
+                        o["backlog_final_sec"] for o in healthy
+                    ),
+                    "words_per_min_min": min(o["words_per_min"] for o in healthy),
+                    "words_per_min_median": statistics.median(
+                        o["words_per_min"] for o in healthy
+                    ),
+                }
+            )
+        row["per_session"] = outs
         results.append(row)
         printable = {k: v for k, v in row.items() if k != "per_session"}
         print(json.dumps(printable), flush=True)
+        if errors:
+            print(
+                f"sessions={n_sessions}: {len(errors)} session(s) failed; "
+                "stopping the sweep at the saturation point",
+                flush=True,
+            )
+            break
 
     if args.output_json:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)

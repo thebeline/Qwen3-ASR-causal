@@ -206,8 +206,8 @@ class Qwen3StreamingOnlineProcessor:
             ceiling = float(torch.mps.recommended_max_memory())
         except Exception:
             ceiling = 0.0
-        threshold = max(2 * (1024**3), 0.15 * ceiling)
-        if driver > threshold and driver > 2 * allocated:
+        threshold = max(2 * (1024**3), 0.08 * ceiling)
+        if driver > threshold and driver > 1.5 * allocated:
             torch.mps.empty_cache()
 
     def _flush(self) -> List[ASRToken]:
@@ -236,6 +236,7 @@ class Qwen3StreamingOnlineProcessor:
                 )
                 self.streamer.append_mel_chunk(zeros, is_flush=True)
             final = self.streamer.finalize(finalize_mode="latest")
+            self._release_mps_allocator_cache()
         self._last_event = None
         return self._emit_committed(final.final_text, self.end, flush=True)
 

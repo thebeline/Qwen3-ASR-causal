@@ -1,0 +1,58 @@
+{
+  "feed_chunk_sec": 0.5,
+  "runs": [
+    {
+      "sessions": 1,
+      "wall_sec": 120.8,
+      "sessions_failed": 0,
+      "errors": [],
+      "decode_busy_ratio": 0.389,
+      "backlog_median_sec_worst": 1.5,
+      "backlog_p95_sec_worst": 13.5,
+      "backlog_final_sec_worst": 0.5,
+      "words_per_min_min": 150.0,
+      "words_per_min_median": 150.0,
+      "per_session": [
+        {
+          "wall_sec": 120.6,
+          "audio_sec": 120.0,
+          "words": 300,
+          "words_per_min": 150.0,
+          "decode_busy_sec": 47.0,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 13.5,
+          "backlog_final_sec": 0.5
+        }
+      ]
+    },
+    {
+      "sessions": 2,
+      "wall_sec": 278.0,
+      "sessions_failed": 1,
+      "errors": [
+        "RuntimeError: MPS backend out of memory (MPS allocated: 42.42 GiB, other allocations: 5.00 MiB, max allowed: 42.43 GiB). Tried to allocate 9.24 MiB on private pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure)."
+      ],
+      "decode_busy_ratio": 0.834,
+      "backlog_median_sec_worst": 22.5,
+      "backlog_p95_sec_worst": 65.5,
+      "backlog_final_sec_worst": 71.0,
+      "words_per_min_min": 72.5,
+      "words_per_min_median": 72.5,
+      "per_session": [
+        {
+          "error": "RuntimeError: MPS backend out of memory (MPS allocated: 42.42 GiB, other allocations: 5.00 MiB, max allowed: 42.43 GiB). Tried to allocate 9.24 MiB on private pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure)."
+        },
+        {
+          "wall_sec": 276.7,
+          "audio_sec": 120.0,
+          "words": 145,
+          "words_per_min": 72.5,
+          "decode_busy_sec": 231.9,
+          "backlog_median_sec": 22.5,
+          "backlog_p95_sec": 65.5,
+          "backlog_final_sec": 71.0
+        }
+      ]
+    }
+  ]
+}

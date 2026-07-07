@@ -1,0 +1,275 @@
+{
+  "feed_chunk_sec": 0.5,
+  "runs": [
+    {
+      "sessions": 1,
+      "wall_sec": 120.8,
+      "decode_busy_ratio": 0.207,
+      "backlog_median_sec_worst": 1.5,
+      "backlog_p95_sec_worst": 2.0,
+      "backlog_final_sec_worst": 1.5,
+      "words_per_min_min": 149.5,
+      "words_per_min_median": 149.5,
+      "per_session": [
+        {
+          "wall_sec": 120.7,
+          "audio_sec": 120.0,
+          "words": 299,
+          "words_per_min": 149.5,
+          "decode_busy_sec": 25.0,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 1.5
+        }
+      ]
+    },
+    {
+      "sessions": 2,
+      "wall_sec": 121.2,
+      "decode_busy_ratio": 0.479,
+      "backlog_median_sec_worst": 1.5,
+      "backlog_p95_sec_worst": 2.0,
+      "backlog_final_sec_worst": 1.5,
+      "words_per_min_min": 128.5,
+      "words_per_min_median": 139.0,
+      "per_session": [
+        {
+          "wall_sec": 120.6,
+          "audio_sec": 120.0,
+          "words": 299,
+          "words_per_min": 149.5,
+          "decode_busy_sec": 30.9,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 1.5
+        },
+        {
+          "wall_sec": 120.4,
+          "audio_sec": 120.0,
+          "words": 257,
+          "words_per_min": 128.5,
+          "decode_busy_sec": 27.1,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 0.5
+        }
+      ]
+    },
+    {
+      "sessions": 4,
+      "wall_sec": 123.1,
+      "decode_busy_ratio": 1.25,
+      "backlog_median_sec_worst": 1.5,
+      "backlog_p95_sec_worst": 2.0,
+      "backlog_final_sec_worst": 2.0,
+      "words_per_min_min": 122.5,
+      "words_per_min_median": 138.25,
+      "per_session": [
+        {
+          "wall_sec": 122.6,
+          "audio_sec": 120.0,
+          "words": 299,
+          "words_per_min": 149.5,
+          "decode_busy_sec": 39.8,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 2.0
+        },
+        {
+          "wall_sec": 121.7,
+          "audio_sec": 120.0,
+          "words": 254,
+          "words_per_min": 127.0,
+          "decode_busy_sec": 37.6,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 1.0
+        },
+        {
+          "wall_sec": 121.6,
+          "audio_sec": 120.0,
+          "words": 245,
+          "words_per_min": 122.5,
+          "decode_busy_sec": 34.0,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 2.0
+        },
+        {
+          "wall_sec": 121.7,
+          "audio_sec": 120.0,
+          "words": 305,
+          "words_per_min": 152.5,
+          "decode_busy_sec": 42.5,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 2.0,
+          "backlog_final_sec": 0.5
+        }
+      ]
+    },
+    {
+      "sessions": 6,
+      "wall_sec": 125.1,
+      "decode_busy_ratio": 3.883,
+      "backlog_median_sec_worst": 1.5,
+      "backlog_p95_sec_worst": 3.5,
+      "backlog_final_sec_worst": 1.0,
+      "words_per_min_min": 119.0,
+      "words_per_min_median": 139.25,
+      "per_session": [
+        {
+          "wall_sec": 120.8,
+          "audio_sec": 120.0,
+          "words": 298,
+          "words_per_min": 149.0,
+          "decode_busy_sec": 77.7,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 3.5,
+          "backlog_final_sec": 1.0
+        },
+        {
+          "wall_sec": 122.7,
+          "audio_sec": 120.0,
+          "words": 260,
+          "words_per_min": 130.0,
+          "decode_busy_sec": 81.6,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 3.0,
+          "backlog_final_sec": 1.0
+        },
+        {
+          "wall_sec": 123.2,
+          "audio_sec": 120.0,
+          "words": 238,
+          "words_per_min": 119.0,
+          "decode_busy_sec": 80.6,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 3.5,
+          "backlog_final_sec": 1.0
+        },
+        {
+          "wall_sec": 122.1,
+          "audio_sec": 120.0,
+          "words": 309,
+          "words_per_min": 154.5,
+          "decode_busy_sec": 80.4,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 3.5,
+          "backlog_final_sec": 1.0
+        },
+        {
+          "wall_sec": 123.1,
+          "audio_sec": 120.0,
+          "words": 297,
+          "words_per_min": 148.5,
+          "decode_busy_sec": 82.4,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 3.5,
+          "backlog_final_sec": 0.5
+        },
+        {
+          "wall_sec": 123.5,
+          "audio_sec": 120.0,
+          "words": 254,
+          "words_per_min": 127.0,
+          "decode_busy_sec": 83.1,
+          "backlog_median_sec": 1.5,
+          "backlog_p95_sec": 3.5,
+          "backlog_final_sec": 0.5
+        }
+      ]
+    },
+    {
+      "sessions": 8,
+      "wall_sec": 133.2,
+      "decode_busy_ratio": 5.711,
+      "backlog_median_sec_worst": 2.5,
+      "backlog_p95_sec_worst": 6.5,
+      "backlog_final_sec_worst": 5.0,
+      "words_per_min_min": 119.5,
+      "words_per_min_median": 138.5,
+      "per_session": [
+        {
+          "wall_sec": 127.1,
+          "audio_sec": 120.0,
+          "words": 297,
+          "words_per_min": 148.5,
+          "decode_busy_sec": 92.8,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 2.5
+        },
+        {
+          "wall_sec": 130.3,
+          "audio_sec": 120.0,
+          "words": 258,
+          "words_per_min": 129.0,
+          "decode_busy_sec": 92.6,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 1.5
+        },
+        {
+          "wall_sec": 131.0,
+          "audio_sec": 120.0,
+          "words": 239,
+          "words_per_min": 119.5,
+          "decode_busy_sec": 96.2,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.5,
+          "backlog_final_sec": 0.5
+        },
+        {
+          "wall_sec": 129.5,
+          "audio_sec": 120.0,
+          "words": 307,
+          "words_per_min": 153.5,
+          "decode_busy_sec": 93.0,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 1.5
+        },
+        {
+          "wall_sec": 131.0,
+          "audio_sec": 120.0,
+          "words": 294,
+          "words_per_min": 147.0,
+          "decode_busy_sec": 95.1,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 0.5
+        },
+        {
+          "wall_sec": 131.7,
+          "audio_sec": 120.0,
+          "words": 261,
+          "words_per_min": 130.5,
+          "decode_busy_sec": 98.1,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 4.5
+        },
+        {
+          "wall_sec": 131.2,
+          "audio_sec": 120.0,
+          "words": 293,
+          "words_per_min": 146.5,
+          "decode_busy_sec": 95.0,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 0.5
+        },
+        {
+          "wall_sec": 131.1,
+          "audio_sec": 120.0,
+          "words": 251,
+          "words_per_min": 125.5,
+          "decode_busy_sec": 97.6,
+          "backlog_median_sec": 2.5,
+          "backlog_p95_sec": 6.0,
+          "backlog_final_sec": 5.0
+        }
+      ]
+    }
+  ]
+}

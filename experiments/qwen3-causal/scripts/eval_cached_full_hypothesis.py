@@ -95,6 +95,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--glob", default="*.wav")
     parser.add_argument("--output-jsonl", type=Path, required=True)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--dtype",
+        choices=("auto", "bfloat16", "float16", "float32"),
+        default="auto",
+        help=(
+            "Model dtype. auto matches the production backend: bfloat16 on "
+            "cuda, float16 on mps, float32 on cpu."
+        ),
+    )
     parser.add_argument("--chunk-ms", type=float, default=1000.0)
     parser.add_argument("--qwen-audio-left-context-sec", type=float, default=None)
     parser.add_argument("--qwen-audio-right-context-ms", type=int, default=None)
@@ -406,6 +415,16 @@ def _model_config_from_context_args(
     return RealtimeAudioConfig(**config_kwargs)
 
 
+def _resolve_dtype(dtype_setting: str, device: torch.device) -> torch.dtype:
+    if dtype_setting == "auto":
+        if device.type == "cuda":
+            return torch.bfloat16
+        if device.type == "mps":
+            return torch.float16
+        return torch.float32
+    return getattr(torch, dtype_setting)
+
+
 def _load_model_and_tokenizer(args: argparse.Namespace, device: torch.device):
     if args.model_id is None:
         raise ValueError("pass --model-id")
@@ -431,7 +450,7 @@ def _load_model_and_tokenizer(args: argparse.Namespace, device: torch.device):
             int(tokenizer.eos_token_id) if tokenizer.eos_token_id is not None else 0
         ),
         wait_token_id=None,
-        dtype=torch.bfloat16,
+        dtype=_resolve_dtype(args.dtype, device),
         device_map="cpu",
     ).to(device)
 
