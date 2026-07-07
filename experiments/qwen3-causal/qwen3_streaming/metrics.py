@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import floor
-from typing import Any, Iterable
+from typing import Any, Iterable, Sequence
 
 from jiwer import wer
 
@@ -201,22 +201,25 @@ def time_truncated_text(
     return join_text_units(units[:keep_units])
 
 
-def _time_truncated_text_from_alignments(
-    units: list[str],
-    *,
-    audio_sec: float,
-    tail_sec: float,
+def hypothesis_word_end_times(
+    units: Sequence[str],
     word_alignments: Iterable[Any],
-) -> str | None:
-    entries = [
-        entry
-        for entry in _alignment_entries(word_alignments)
-        if entry["start_sec"] <= audio_sec
-    ]
+    *,
+    max_start_sec: float | None = None,
+) -> list[float | None] | None:
+    """Per-hypothesis-unit audio end times from forced-aligner word timestamps.
+
+    Hypothesis units are matched to the timestamped reference words with a
+    SequenceMatcher on normalized words; replace/insert spans interpolate over
+    the covering reference span. Returns None when no usable alignment entries
+    exist; unmatched units stay None in the returned list.
+    """
+    entries = _alignment_entries(word_alignments)
+    if max_start_sec is not None:
+        entries = [entry for entry in entries if entry["start_sec"] <= max_start_sec]
     if not entries:
         return None
 
-    cutoff_sec = max(0.0, audio_sec - tail_sec)
     hyp_norm = [_normalize_match_word(unit) for unit in units]
     ref_norm = [_normalize_match_word(str(entry["text"])) for entry in entries]
     hyp_end_sec: list[float | None] = [None] * len(units)
@@ -252,6 +255,24 @@ def _time_truncated_text_from_alignments(
                 hyp_end=hyp_end,
             )
 
+    return hyp_end_sec
+
+
+def _time_truncated_text_from_alignments(
+    units: list[str],
+    *,
+    audio_sec: float,
+    tail_sec: float,
+    word_alignments: Iterable[Any],
+) -> str | None:
+    hyp_end_sec = hypothesis_word_end_times(
+        units,
+        word_alignments,
+        max_start_sec=audio_sec,
+    )
+    if hyp_end_sec is None:
+        return None
+    cutoff_sec = max(0.0, audio_sec - tail_sec)
     kept_units = [
         unit
         for unit, end_sec in zip(units, hyp_end_sec, strict=True)
