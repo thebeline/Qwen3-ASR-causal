@@ -154,18 +154,36 @@ class Qwen3StreamingOnlineProcessor:
     # internals
     # ------------------------------------------------------------------
 
+    # Largest audio span appended in one decode. Catch-up after a stall (file
+    # transcription, REST endpoint) must not grow appends without bound: a
+    # single 70 s append prefills ~875 decoder steps — far past the ~200-step
+    # segment cap the rollover assumes — with transient allocations that can
+    # pin the accelerator at its memory ceiling and turn decodes into a
+    # tens-of-seconds death spiral (observed on MPS at 42 GB). Six chunks
+    # (12 s at the 2 s default) stays under the segment cap while still
+    # amortizing catch-up decodes.
+    _MAX_APPEND_CHUNKS = 6
+
     def _decode_pending(self) -> dict | None:
-        """Featurize pending audio and run one streamer update."""
+        """Featurize pending audio and run bounded streamer updates."""
         audio = self.audio_buffer
         self.audio_buffer = np.array([], dtype=np.float32)
-        frames = self.mel.append(audio)
-        if frames is None or frames.shape[1] == 0:
-            return None
+        max_slice = max(
+            1,
+            int(self._MAX_APPEND_CHUNKS * self.asr.chunk_sec * self.SAMPLING_RATE),
+        )
+        event = None
         started = time.perf_counter()
-        with self.asr.decode_lock:
-            event = self.streamer.append_mel_chunk(frames.to(self.asr.device))
-            self._release_mps_allocator_cache()
+        for start in range(0, len(audio), max_slice):
+            frames = self.mel.append(audio[start : start + max_slice])
+            if frames is None or frames.shape[1] == 0:
+                continue
+            with self.asr.decode_lock:
+                event = self.streamer.append_mel_chunk(frames.to(self.asr.device))
+                self._release_mps_allocator_cache()
         self._last_decode_duration = time.perf_counter() - started
+        if event is None:
+            return None
         self._last_event = event
         return event
 

@@ -151,7 +151,8 @@ def test_self_pacing_waits_longer_after_slow_decode():
 
     feed_seconds(processor, 10.0, 13.0)
     processor.process_iter()
-    assert asr.streamers[0].calls == 1
+    # The 13 s backlog decodes in bounded slices (12 s + 1 s), not one append.
+    assert asr.streamers[0].calls == 2
 
 
 def test_rollover_revision_never_retracts_emitted_words():
@@ -244,3 +245,21 @@ def test_session_language_used_for_streamer_and_tokens():
     feed_seconds(processor, 3.0, 3.0)
     tokens, _ = processor.process_iter()
     assert tokens[0].detected_language == "fr"
+
+
+def test_catchup_backlog_is_decoded_in_bounded_slices():
+    """A large pending buffer must not become one giant append.
+
+    Unbounded catch-up appends prefill far past the segment cap and blow
+    transient accelerator memory (observed as a 42 GB MPS stall); the
+    processor slices them to _MAX_APPEND_CHUNKS x chunk_sec per decode.
+    """
+    asr = FakeASR([[("hello", "")]])
+    processor = Qwen3StreamingOnlineProcessor(asr)
+
+    feed_seconds(processor, 30.0, 30.0)  # 30 s backlog, chunk_sec = 2.0
+    processor.process_iter()
+
+    streamer = asr.streamers[0]
+    # 6 chunks x 2.0 s = 12 s per slice -> 12 + 12 + 6.
+    assert streamer.calls == 3
