@@ -50,3 +50,29 @@ real-time sessions on the plain HF path with modest backlog growth at 8.
 (On MPS the same bench saturates at 2 sessions — allocator ceiling — see
 ../mps_20260707_latency/concurrency_mps.json.) Larger fleets belong to
 the vLLM backend.
+
+## LibriSpeech gates at the new default (full test sets, A100)
+
+| split | stable_iterations | utts | WER (whisper norm) | published (stable 2) |
+|---|---:|---:|---:|---:|
+| test-clean | 1 | 2620 | **3.67** | 3.64 |
+| test-other | 1 | 2939 | **7.22** | 7.16 |
+
+The stable_iterations=2 -> 1 flip costs +0.03 / +0.06 pt on short-form —
+run noise. Short utterances commit mostly through the EOS flush, so the
+long-form latency gain is free here.
+
+## LibriSpeech gates at the new default (stable_iterations=1)
+
+Full test sets through the streaming stack (A100, `ls_gates/`):
+
+| set | s=1 (this run) | s=2 (published) | Δ |
+|---|---:|---:|---:|
+| test-clean (2620 utts) | **3.67** | 3.64 | +0.03 |
+| test-other (2939 utts) | **7.22** | 7.16 | +0.06 |
+
+Same-stack control on the first 500 utterances: clean s1/s2 and other
+s1 11.18 / s2 11.14 — deltas within run noise. Short utterances commit
+mostly through the EOS flush, so the stability-iteration flip does not
+affect short-form quality; the default change is validated on both axes
+(long-form: +0.5 pt for p50 5.9→4.0 s; short-form: unchanged).

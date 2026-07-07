@@ -1,0 +1,8 @@
+{
+  "split": "clean",
+  "stable_iterations": 2,
+  "utts": 500,
+  "audio_hours": 1.06,
+  "wer_whisper_norm": 0.0274,
+  "rtf": 0.1706
+}
