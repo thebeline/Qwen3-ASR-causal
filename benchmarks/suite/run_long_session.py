@@ -2,8 +2,8 @@
 """Long-session stability bench: memory slope and output health over time.
 
 Feeds a multi-file concatenation (default ~45 min) through ONE
-Qwen3StreamingOnlineProcessor session as fast as the decoder allows — the
-harshest allocator/backlog regime (real-time feeding is strictly gentler) —
+Qwen3StreamingOnlineProcessor session as fast as the decoder allows: the
+harshest allocator/backlog regime (real-time feeding is strictly gentler):
 sampling process RSS, torch accelerator memory, event-history size and
 output rate along the way.
 

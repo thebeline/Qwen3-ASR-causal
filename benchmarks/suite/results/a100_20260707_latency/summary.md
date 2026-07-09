@@ -1,4 +1,4 @@
-# A100 cross-check + cadence stage 2 — MCIF-21, causal backend
+# A100 cross-check + cadence stage 2: MCIF-21, causal backend
 
 JarvisLabs A100-40GB (cu130, python 3.12), same corpus/config as the
 MPS run in `../mps_20260707_latency/`. Events regenerated on-device;
@@ -14,7 +14,7 @@ Per-word proxy latency (seconds), A100 vs (MPS):
 | hold 6 / stable 1 (default) | 4.02 (3.98) | 7.90 (7.9) | 0.2696 |
 | hold 2 / stable 1 | 2.18 (2.13) | 7.84 (7.8) | 0.2726 |
 
-Settled corpus WER 0.2639 (human refs, legacy norm) vs 0.2621 on MPS —
+Settled corpus WER 0.2639 (human refs, legacy norm) vs 0.2621 on MPS
 run noise. HF/CUDA RTF 0.159 (matches the published H100 HF 0.160).
 Commit latency is policy-bound, not hardware-bound: the numbers in the
 README hold across devices.
@@ -47,7 +47,7 @@ these same events), not a faster cadence.
 
 The decode lock serializes, but decodes are short: an A100 sustains 6-8
 real-time sessions on the plain HF path with modest backlog growth at 8.
-(On MPS the same bench saturates at 2 sessions — allocator ceiling — see
+(On MPS the same bench saturates at 2 sessions: allocator ceiling: see
 ../mps_20260707_latency/concurrency_mps.json.) Larger fleets belong to
 the vLLM backend.
 
@@ -58,7 +58,7 @@ the vLLM backend.
 | test-clean | 1 | 2620 | **3.67** | 3.64 |
 | test-other | 1 | 2939 | **7.22** | 7.16 |
 
-The stable_iterations=2 -> 1 flip costs +0.03 / +0.06 pt on short-form —
+The stable_iterations=2 -> 1 flip costs +0.03 / +0.06 pt on short-form
 run noise. Short utterances commit mostly through the EOS flush, so the
 long-form latency gain is free here.
 
@@ -72,7 +72,7 @@ Full test sets through the streaming stack (A100, `ls_gates/`):
 | test-other (2939 utts) | **7.22** | 7.16 | +0.06 |
 
 Same-stack control on the first 500 utterances: clean s1/s2 and other
-s1 11.18 / s2 11.14 — deltas within run noise. Short utterances commit
+s1 11.18 / s2 11.14: deltas within run noise. Short utterances commit
 mostly through the EOS flush, so the stability-iteration flip does not
 affect short-form quality; the default change is validated on both axes
 (long-form: +0.5 pt for p50 5.9→4.0 s; short-form: unchanged).

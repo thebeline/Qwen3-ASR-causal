@@ -1,4 +1,4 @@
-# Per-word commit latency — MCIF-21, causal backend, policy sweep
+# Per-word commit latency: MCIF-21, causal backend, policy sweep
 
 First measurement of the metric that matters for live captions: how long
 after a word is spoken does the live no-rewrite contract commit it.
@@ -35,7 +35,7 @@ whisper-norm re-scored for the rows above).
 ## Readings
 
 - At stable_iterations=2 the policy barely commits: 93% of words wait for
-  the ~12-16 s punctuation rollover — that cadence, not the holdback, set
+  the ~12-16 s punctuation rollover: that cadence, not the holdback, set
   the old latency (p95 = words waiting out their segment).
 - One knob (stable_iterations 2→1) buys ~1.5-1.7x at every percentile for
   +0.5 pt; hold_back only matters below 3 words, where p50 hits the decode

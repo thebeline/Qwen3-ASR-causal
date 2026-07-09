@@ -95,7 +95,7 @@ strategy made streaming; the causal tower trades ~1.4x the live windowed WER
 for 3.0x (avg) to 4.1x (peak) less compute, constant in stream age
 (`benchmarks/suite/run_flops.py`, FlopCounterMode on real weights).
 
-> **Language support**: the causal tower is **English-only** — its
+> **Language support**: the causal tower is **English-only**: its
 > LibriSpeech distillation degraded other languages severely (FLEURS:
 > fr 7.8→37.9, de 12.6→49.8 WER, zh 11.4→85.7 CER vs windowed; see
 > `benchmarks/suite/results/mps_20260707_fleurs/`). Use the windowed
@@ -104,7 +104,7 @@ for 3.0x (avg) to 4.1x (peak) less compute, constant in stream age
 Short-form through the same streaming stack: LibriSpeech test-clean **3.64** /
 test-other **7.16** (for reference, Voxtral Mini Realtime 3B @480 ms publishes
 2.1 / 5.5 with ~5x the parameters). At the shipped low-latency default
-(stable_iterations=1) the full test sets measure 3.67 / 7.22 — the latency
+(stable_iterations=1) the full test sets measure 3.67 / 7.22: the latency
 gain is free on short-form.
 
 ## Commit latency
@@ -120,7 +120,7 @@ measured by replaying the 21-talk events under the live contract
 | hold 2 / stable 1 (`--qwen3-streaming-hold-back-words 2`) | 2.1 s | 7.8 s | 18.9 |
 
 At the old default, 93% of words were committed by the ~12-16 s punctuation
-rollover rather than the stability policy — one stability iteration is enough
+rollover rather than the stability policy: one stability iteration is enough
 on the causal hypothesis stream. The 2.1 s point sits at the 1.92 s block
 cadence floor. The unstable tail is additionally visible immediately through
 `get_buffer()` (~2 s behind the audio head).
@@ -139,7 +139,7 @@ Key numbers:
   and quality parity with the H100 bf16 run (settled 18.3 vs 18.1).
 - A100 vLLM CUDA: normal 0.146 RTF, causal `vllm-live` 0.099 RTF.
 - The A100 `vllm-text` fallback measured 0.113 RTF on the same 22 s smoke.
-- CPU fp32 (Apple M-series cores): causal 0.82 RTF on a 277 s talk —
+- CPU fp32 (Apple M-series cores): causal 0.82 RTF on a 277 s talk,
   real-time capable, single session.
 
 These speed smokes are not WER claims; use the long-form WER table above for

@@ -1,11 +1,11 @@
 """Decoder-side decode-control equivalence for the qwen3-streaming backend.
 
-Part 1 — `_GreedyControlSession` must be value-equivalent to the legacy
+Part 1: `_GreedyControlSession` must be value-equivalent to the legacy
 control pipeline (`_apply_repetition_controls_to_logits` kept in source as the
 reference spec, plus the deleted `_control_logits_and_pick` preamble/stop
 handling reproduced here verbatim).
 
-Part 2 — rolling audio-prefix decoder KV + lossless speculative draft verify:
+Part 2: rolling audio-prefix decoder KV + lossless speculative draft verify:
 parity with the full re-prefill path on history-dependent fakes.
 """
 
@@ -229,5 +229,5 @@ def test_pick_single_row_finishes_immediately():
 
 
 # ---------------------------------------------------------------------------
-# Part 2 — rolling audio-prefix decoder KV + speculative draft verification.
+# Part 2: rolling audio-prefix decoder KV + speculative draft verification.
 # ---------------------------------------------------------------------------

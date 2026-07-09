@@ -3,7 +3,7 @@
 Append-only execution of the pretrained Qwen3-ASR audio tower: bidirectional
 attention within fixed blocks (the trained regime is 96/192 mel frames),
 causal per-layer KV across blocks with a bounded left window, positions that
-continue monotonically — each mel frame transits the tower exactly once. The
+continue monotonically: each mel frame transits the tower exactly once. The
 fine-tuned tower checkpoint (embedding distillation, see
 ``experiments/qwen3-causal/RUNS.md``) is loaded on top of the base model.
 

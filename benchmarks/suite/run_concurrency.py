@@ -6,7 +6,7 @@ feeding its own audio at 1.0x wall-clock pace (0.5 s chunks, staggered
 starts), and measures what serialization does to each session:
 
 - backlog: pending un-decoded audio per session over time (median / p95 /
-  final) — the saturation signal; a healthy session keeps backlog near the
+  final): the saturation signal; a healthy session keeps backlog near the
   decode cadence, a starved one drifts upward;
 - decode busy ratio: summed decode-lock time / wall time (1.0 = the lock is
   the bottleneck);

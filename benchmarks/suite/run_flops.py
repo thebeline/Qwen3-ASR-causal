@@ -2,7 +2,7 @@
 """Measured per-update FLOPs for the qwen3-streaming backends.
 
 Ground truth via ``torch.utils.flop_counter.FlopCounterMode`` on the real
-modules (real tower weights; random-init text model — FLOPs are value-
+modules (real tower weights; random-init text model: FLOPs are value-
 independent). Position/step counts per update are the code-exact per-segment
 averages: windowed prefill grows 44->212 positions (avg 128) with 7->49
 sequential steps (avg 28); causal forwards ~62 positions (24 audio + 8 tail

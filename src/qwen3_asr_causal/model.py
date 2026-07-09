@@ -855,7 +855,7 @@ class Qwen3ASRRealtimeQwenDecoderModel(nn.Module):
         """Greedy full-hypothesis decode over cached finalized audio embeddings.
 
         With ``use_decoder_kv_cache`` (default) the prefix is forwarded once and
-        tokens decode incrementally over a KV cache — greedy-parity with the
+        tokens decode incrementally over a KV cache: greedy-parity with the
         legacy per-token full re-forward at O(P + T) instead of O(T * (P + T))
         forwarded positions. Falls back to the legacy loop when the text model
         does not return a cache.
@@ -1009,7 +1009,7 @@ class Qwen3ASRRealtimeQwenDecoderModel(nn.Module):
         Decode-equivalent to ``generate_full_hypothesis_from_cached_audio``
         with an expanded prefix, but per chunk only the new audio embeddings,
         the (position-shifting) template tail and the previous hypothesis (as
-        a speculative draft) are forwarded — in ONE parallel pass — and
+        a speculative draft) are forwarded: in ONE parallel pass: and
         sequential decode resumes from the first draft divergence. The decoder
         KV over [head + audio] survives across chunks via ``state.decoder``.
 

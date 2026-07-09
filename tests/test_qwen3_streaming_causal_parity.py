@@ -183,7 +183,7 @@ def test_prod_causal_matches_experiments_harness():
             )
         exp_text = exp_streamer.finalize(finalize_mode="latest").final_text
 
-        # Gate 1 — port parity: identical feeding must yield (near-)identical
+        # Gate 1: port parity: identical feeding must yield (near-)identical
         # transcripts. fp32: exact; bf16: rare near-tie argmax flips only.
         if is_exact:
             assert prod_exact == exp_text, (
@@ -197,7 +197,7 @@ def test_prod_causal_matches_experiments_harness():
                 f"prod: {prod_exact!r}\nexp:  {exp_text!r}"
             )
 
-        # Gate 2 — pacing robustness: variable chunking moves decode points
+        # Gate 2: pacing robustness: variable chunking moves decode points
         # (hence punctuation-rollover boundaries), so transcripts legitimately
         # differ in form; QUALITY vs the reference must not move.
         reference = row.get("teacher_text") or row.get("text") or ""
@@ -205,7 +205,7 @@ def test_prod_causal_matches_experiments_harness():
             wer_exact = _word_error_rate(reference, prod_exact)
             wer_paced = _word_error_rate(reference, prod_paced)
             # One-sided: variable pacing must not DEGRADE quality (being
-            # better is fine — segmentation boundaries shift either way).
+            # better is fine: segmentation boundaries shift either way).
             assert wer_paced <= wer_exact + 0.025, (
                 f"pacing degraded quality on {row['audio']}: "
                 f"WER {wer_exact:.4f} (exact blocks) vs {wer_paced:.4f} (paced)"

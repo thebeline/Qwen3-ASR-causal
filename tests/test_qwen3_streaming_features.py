@@ -31,7 +31,7 @@ def speech_like_audio(n_samples: int, seed: int = 0) -> np.ndarray:
     """Noise plus periodic loud bursts, so energy is spread like real speech.
 
     The window-local dynamic-range clamp only matches the file-global one when
-    every featurized window contains a near-max frame — true for speech, not
+    every featurized window contains a near-max frame: true for speech, not
     for a single isolated onset (that divergence is the documented
     approximation of StreamingMelExtractor).
     """

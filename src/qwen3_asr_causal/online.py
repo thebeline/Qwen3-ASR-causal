@@ -10,7 +10,7 @@ State machine per WebSocket session::
     start_silence/finish -> flush mel tail + right context, finalize, emit rest
 
 Word timestamps are linear interpolations across each newly committed span
-(the streamer is text-only). Typical error is on the order of a second —
+(the streamer is text-only). Typical error is on the order of a second:
 fine for line/diarization alignment, not for precise word timing; use the
 ``qwen3-vllm`` backend (ForcedAligner) when exact timestamps matter.
 
@@ -156,8 +156,8 @@ class Qwen3StreamingOnlineProcessor:
 
     # Largest audio span appended in one decode. Catch-up after a stall (file
     # transcription, REST endpoint) must not grow appends without bound: a
-    # single 70 s append prefills ~875 decoder steps — far past the ~200-step
-    # segment cap the rollover assumes — with transient allocations that can
+    # single 70 s append prefills ~875 decoder steps: far past the ~200-step
+    # segment cap the rollover assumes: with transient allocations that can
     # pin the accelerator at its memory ceiling and turn decodes into a
     # tens-of-seconds death spiral (observed on MPS at 42 GB). Six chunks
     # (12 s at the 2 s default) stays under the segment cap while still

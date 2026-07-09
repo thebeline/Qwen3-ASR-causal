@@ -8,7 +8,7 @@ trimming the cached embeddings.
 
 Promoted from ``experiments/qwen3-causal/qwen3_streaming/cached_full_hypothesis.py``
 @ 9d4b99a (windowed point: WER 0.110 / RTF 0.10; causal point: WER 0.181 /
-RTF 0.107 on 21 long-form MCIF talks — see RUNS.md there). Decoder rolling KV
+RTF 0.107 on 21 long-form MCIF talks: see RUNS.md there). Decoder rolling KV
 and the speculative draft default OFF here: the validated windowed operating
 point stays byte-stable; the causal backend turns them on explicitly.
 """

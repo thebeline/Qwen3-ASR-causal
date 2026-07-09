@@ -102,7 +102,7 @@ class _Out:
 
 
 class FakeCachingQwenTextModel(torch.nn.Module):
-    """hidden[t] = mean(inputs[0..t]) — strictly history-dependent."""
+    """hidden[t] = mean(inputs[0..t]): strictly history-dependent."""
 
     def __init__(self, vocab_size: int = VOCAB, hidden_size: int = D_MODEL):
         super().__init__()
