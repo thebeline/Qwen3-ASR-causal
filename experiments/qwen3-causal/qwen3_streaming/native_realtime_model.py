@@ -15,6 +15,12 @@ from .realtime_config import RealtimeAudioConfig
 class AudioLayerCache:
     key: torch.Tensor | None = None
     value: torch.Tensor | None = None
+    # Encoder-step position of every cached entry (1-D, len = key.shape[-2]).
+    # None means the cache is a contiguous tail ending right before the
+    # current position_offset (the pre-sinks layout); with attention sinks
+    # the cache is [pinned first steps + rolling tail] and positions are no
+    # longer reconstructible arithmetically.
+    positions: torch.Tensor | None = None
 
 
 @dataclass
@@ -667,10 +673,59 @@ class QwenAudioCausalKVEncoder(nn.Module):
         self.block_bidirectional = bool(
             getattr(config, "qwen_audio_block_bidirectional", False)
         )
+        self.sink_steps = int(getattr(config, "qwen_audio_sink_steps", 0))
+        if self.sink_steps < 0:
+            raise ValueError("qwen_audio_sink_steps must be >= 0")
+        if self.sink_steps > 0 and self.mutable_tail_steps > 0:
+            # The mutable-tail freeze path appends raw K/V to the caches and
+            # would desync the stored sink positions.
+            raise ValueError(
+                "qwen_audio_sink_steps and qwen_audio_mutable_tail_sec are "
+                "mutually exclusive"
+            )
 
     @property
     def right_context_frames(self) -> int:
         return 0
+
+    def _past_k_positions(
+        self,
+        cache: AudioLayerCache,
+        *,
+        past_len: int,
+        position_offset: int,
+        device: torch.device,
+    ) -> torch.Tensor:
+        """Positions of cached keys: stored if present, else contiguous tail."""
+        if cache.positions is not None:
+            return cache.positions.to(device)
+        start = int(position_offset) - past_len
+        return torch.arange(start, start + past_len, device=device)
+
+    def _window_mask(
+        self,
+        q_positions: torch.Tensor,
+        k_positions: torch.Tensor,
+        *,
+        length: int,
+        position_offset: int,
+    ) -> torch.Tensor:
+        if self.block_bidirectional and length > 0:
+            # Chunked-attention pattern: every query in the current block sees
+            # every key of the block (bidirectional within block), plus the
+            # frozen causal prefix. Still append-only; latency = block size.
+            block_max = int(position_offset) + length - 1
+            allowed = k_positions[None, :] <= block_max
+        else:
+            allowed = k_positions[None, :] <= q_positions[:, None]
+        in_window = k_positions[None, :] >= (
+            q_positions[:, None] - self.left_context_steps + 1
+        )
+        if self.sink_steps > 0:
+            # StreamingLLM-style sinks: the first steps of the stream stay
+            # attendable regardless of the rolling left window.
+            in_window = in_window | (k_positions[None, :] < self.sink_steps)
+        return allowed & in_window
 
     def init_state(self) -> QwenAudioCausalKVState:
         layers = getattr(self.audio_tower, "layers", ())
@@ -864,28 +919,27 @@ class QwenAudioCausalKVEncoder(nn.Module):
             all_v = value_states
 
         total_len = int(all_k.shape[-2])
-        cache_start_pos = int(position_offset) - past_len
         q_positions = torch.arange(
             int(position_offset),
             int(position_offset) + length,
             device=hidden_states.device,
         )
-        k_positions = torch.arange(
-            cache_start_pos,
-            cache_start_pos + total_len,
-            device=hidden_states.device,
+        k_positions = torch.cat(
+            [
+                self._past_k_positions(
+                    cache,
+                    past_len=past_len,
+                    position_offset=int(position_offset),
+                    device=hidden_states.device,
+                ),
+                q_positions,
+            ]
         )
-        if self.block_bidirectional and length > 0:
-            # Chunked-attention pattern: every query in the current block sees
-            # every key of the block (bidirectional within block), plus the
-            # frozen causal prefix. Still append-only; latency = block size.
-            block_max = int(position_offset) + length - 1
-            allowed = k_positions[None, :] <= block_max
-        else:
-            allowed = k_positions[None, :] <= q_positions[:, None]
-        allowed = allowed & (
-            k_positions[None, :]
-            >= (q_positions[:, None] - self.left_context_steps + 1)
+        allowed = self._window_mask(
+            q_positions,
+            k_positions,
+            length=length,
+            position_offset=int(position_offset),
         )
 
         scores = torch.matmul(
@@ -906,11 +960,31 @@ class QwenAudioCausalKVEncoder(nn.Module):
         context = context.transpose(1, 2).contiguous().view(batch, length, -1)
         output = attn.out_proj(context.to(dtype=attn.out_proj.weight.dtype))
 
-        keep = min(total_len, self.left_context_steps)
-        next_cache = AudioLayerCache(
-            key=all_k[:, :, -keep:, :].detach(),
-            value=all_v[:, :, -keep:, :].detach(),
-        )
+        keep_tail = min(total_len, self.left_context_steps)
+        n_sink = 0
+        if self.sink_steps > 0:
+            n_sink = int((k_positions < self.sink_steps).sum())
+        if n_sink > 0 and total_len > n_sink + keep_tail:
+            keep_index = torch.cat(
+                [
+                    torch.arange(n_sink, device=all_k.device),
+                    torch.arange(
+                        total_len - keep_tail, total_len, device=all_k.device
+                    ),
+                ]
+            )
+            next_cache = AudioLayerCache(
+                key=all_k.index_select(-2, keep_index).detach(),
+                value=all_v.index_select(-2, keep_index).detach(),
+                positions=k_positions.index_select(0, keep_index).detach(),
+            )
+        else:
+            keep = min(total_len, keep_tail + n_sink) if n_sink else keep_tail
+            next_cache = AudioLayerCache(
+                key=all_k[:, :, -keep:, :].detach(),
+                value=all_v[:, :, -keep:, :].detach(),
+                positions=k_positions[-keep:].detach(),
+            )
         return output.to(dtype=hidden_states.dtype), next_cache
 
     def _layer_chunk(
@@ -994,29 +1068,27 @@ class QwenAudioCausalKVEncoder(nn.Module):
             all_k = key_states
             all_v = value_states
 
-        total_len = int(all_k.shape[-2])
-        cache_start_pos = int(position_offset) - past_len
         q_positions = torch.arange(
             int(position_offset),
             int(position_offset) + length,
             device=hidden_states.device,
         )
-        k_positions = torch.arange(
-            cache_start_pos,
-            cache_start_pos + total_len,
-            device=hidden_states.device,
+        k_positions = torch.cat(
+            [
+                self._past_k_positions(
+                    cache,
+                    past_len=past_len,
+                    position_offset=int(position_offset),
+                    device=hidden_states.device,
+                ),
+                q_positions,
+            ]
         )
-        if self.block_bidirectional and length > 0:
-            # Chunked-attention pattern: every query in the current block sees
-            # every key of the block (bidirectional within block), plus the
-            # frozen causal prefix. Still append-only; latency = block size.
-            block_max = int(position_offset) + length - 1
-            allowed = k_positions[None, :] <= block_max
-        else:
-            allowed = k_positions[None, :] <= q_positions[:, None]
-        allowed = allowed & (
-            k_positions[None, :]
-            >= (q_positions[:, None] - self.left_context_steps + 1)
+        allowed = self._window_mask(
+            q_positions,
+            k_positions,
+            length=length,
+            position_offset=int(position_offset),
         )
 
         scores = torch.matmul(
@@ -1172,6 +1244,9 @@ class QwenAudioCausalKVEncoder(nn.Module):
                 keep = min(int(new_k.shape[-2]), self.left_context_steps)
                 cache.key = new_k[:, :, -keep:, :]
                 cache.value = new_v[:, :, -keep:, :]
+                # The cache is a contiguous tail here (sinks are excluded in
+                # mutable-tail mode); positions stay arithmetic.
+                cache.positions = None
             state.emitted_steps += freeze_steps
         state.tail_blocks = block_entries[freeze_blocks:]
         state.mutable_steps = total_steps - freeze_steps

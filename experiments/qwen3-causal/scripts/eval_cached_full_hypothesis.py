@@ -108,6 +108,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--qwen-audio-left-context-sec", type=float, default=None)
     parser.add_argument("--qwen-audio-right-context-ms", type=int, default=None)
     parser.add_argument(
+        "--qwen-audio-sink-steps",
+        type=int,
+        default=0,
+        help=(
+            "Causal-KV backend: pin the first N encoder steps of the stream "
+            "as StreamingLLM-style attention sinks (never evicted, always "
+            "attendable). Diagnostic for no-reset long-form."
+        ),
+    )
+    parser.add_argument(
         "--qwen-audio-block-bidirectional",
         action="store_true",
         help=(
@@ -395,6 +405,7 @@ def _model_config_from_context_args(
         and args.qwen_audio_right_context_ms is None
         and args.qwen_audio_mutable_tail_sec is None
         and not args.qwen_audio_block_bidirectional
+        and not args.qwen_audio_sink_steps
     ):
         return None
     config_kwargs: dict[str, Any] = {"d_model": int(d_model), "audio_window_sec": 15.0}
@@ -412,6 +423,8 @@ def _model_config_from_context_args(
         )
     if args.qwen_audio_block_bidirectional:
         config_kwargs["qwen_audio_block_bidirectional"] = True
+    if args.qwen_audio_sink_steps:
+        config_kwargs["qwen_audio_sink_steps"] = int(args.qwen_audio_sink_steps)
     return RealtimeAudioConfig(**config_kwargs)
 
 

@@ -28,6 +28,11 @@ class RealtimeAudioConfig:
     # the causal KV prefix). Still append-only; latency = block size. This is
     # the standard streaming-encoder attention pattern (chunked attention).
     qwen_audio_block_bidirectional: bool = False
+    # StreamingLLM-style attention sinks for the causal-KV backend: the first
+    # N encoder steps of the stream are never evicted from the per-layer KV
+    # cache, and every query may attend to them regardless of the left
+    # window. 0 disables (plain rolling window).
+    qwen_audio_sink_steps: int = 0
     qwen_audio_adapter_hidden_dim: int = 0
     qwen_audio_adapter_layers: int = 0
     qwen_audio_adapter_dropout: float = 0.0
@@ -86,6 +91,8 @@ class RealtimeAudioConfig:
             raise ValueError("qwen_audio_adapter_residual_scale must be >= 0")
         if self.qwen_audio_mutable_tail_sec < 0.0:
             raise ValueError("qwen_audio_mutable_tail_sec must be >= 0")
+        if self.qwen_audio_sink_steps < 0:
+            raise ValueError("qwen_audio_sink_steps must be >= 0")
 
     @property
     def frames_per_decoder_step(self) -> int:
