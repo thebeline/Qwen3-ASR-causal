@@ -1,0 +1,9 @@
+{
+  "split": "clean",
+  "stable_iterations": 1,
+  "tower": "/home/tower_pilot.safetensors",
+  "utts": 2620,
+  "audio_hours": 5.4,
+  "wer_whisper_norm": 0.0373,
+  "rtf": 0.2083
+}

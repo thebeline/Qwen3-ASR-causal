@@ -53,3 +53,22 @@ People's Speech mix), same recipe, ~$10-15 on A100. Kill criterion from
 the plan: stop if the corpus does not reach <= 0.16 whisper-norm after
 +2k h. Optional: multilingual mix (MLS/CommonVoice) to lift the
 English-only limitation in the same run.
+
+## Validation and publication (v0.2 tower)
+
+Full validation of the pilot tower before shipping (A100, `ls_*_pilot.json`,
+`latency_pilot_*.jsonl`):
+
+| metric | v0.1 (published) | pilot | delta |
+|---|---:|---:|---:|
+| MCIF-21 settled (whisper norm) | 18.3 | **17.2** | -1.1 |
+| MCIF-21 live, default policy | 18.8 | **17.6** | -1.2 |
+| MCIF-21 live, hold_back 2 | 18.9 | 17.8 | -1.1 |
+| LibriSpeech test-clean (s=1, full) | 3.67 | 3.73 | +0.06 |
+| LibriSpeech test-other (s=1, full) | 7.22 | 7.34 | +0.12 |
+| commit latency p50 / p95 (default) | 4.0 / 7.9 s | 4.1 / 8.0 s | unchanged |
+
+Long-form gains dominate a marginal short-form cost; latency is
+policy-bound and unchanged. Shipped as the v0.2 weights of
+`qfuxa/qwen3-asr-0.6b-streaming` (weights commit 8aaa766; the v0.1
+weights remain available at revision 012f13dc). Still English-only.
