@@ -29,6 +29,13 @@ from .model_paths import (
     DEFAULT_CAUSAL_TOWER_CHECKPOINT,
     DEFAULT_QWEN3_STREAMING_MODEL,
 )
+from .sentence_streamer import (
+    COMMIT_MODES,
+    DEFAULT_SENTENCE_ROLLOVER_MARGIN_SEC,
+    DEFAULT_SENTENCE_SOFT_STEPS,
+    SentenceSegmentedStreamer,
+    validate_sentence_rollover,
+)
 from .streamer import (
     CachedFullHypothesisConfig,
     SegmentedCachedFullHypothesisStreamer,
@@ -124,6 +131,29 @@ class Qwen3StreamingASR:
             if stable_iterations_setting is not None
             else 2
         )
+        # Commit policy: "prefix" (stable word prefix + time-based wholesale
+        # rollover, the validated default) or "sentence" (sentence commits,
+        # rollover at the last committed sentence end; see sentence_streamer).
+        self.commit_mode = str(kwargs.get("qwen3_streaming_commit_mode", "prefix") or "prefix")
+        if self.commit_mode not in COMMIT_MODES:
+            raise ValueError(
+                f"qwen3_streaming_commit_mode must be one of {COMMIT_MODES}, got {self.commit_mode!r}"
+            )
+        self.sentence_soft_steps = int(
+            kwargs.get("qwen3_streaming_sentence_soft_steps", DEFAULT_SENTENCE_SOFT_STEPS)
+        )
+        self.sentence_rollover_margin_sec = float(
+            kwargs.get(
+                "qwen3_streaming_sentence_rollover_margin_sec",
+                DEFAULT_SENTENCE_ROLLOVER_MARGIN_SEC,
+            )
+        )
+        if self.commit_mode == "sentence":
+            validate_sentence_rollover(
+                soft_steps=self.sentence_soft_steps,
+                max_steps=self.segment_max_steps,
+                margin_steps=self._sentence_margin_steps(),
+            )
         self.max_new_tokens = int(kwargs.get("qwen3_streaming_max_new_tokens", 256))
         self.base_context = str(kwargs.get("qwen3_streaming_context", "") or "")
         self.prompt_context_words = int(
@@ -368,10 +398,7 @@ class Qwen3StreamingASR:
             decoder_rolling_kv=self.decoder_rolling_kv,
             speculative_draft=self.speculative_draft,
         )
-        return SegmentedCachedFullHypothesisStreamer(
-            self.model,
-            self.qwen_tokenizer,
-            config,
+        segment_kwargs = dict(
             segment_max_cached_steps=self.segment_max_steps,
             segment_keep_tail_steps=self.segment_keep_tail_steps,
             segment_finalize_mode="latest",
@@ -383,6 +410,27 @@ class Qwen3StreamingASR:
             segment_roll_before_generate=self.segment_roll_before_generate,
             reset_encoder_on_rollover=self.reset_encoder_on_rollover,
         )
+        if self.commit_mode == "sentence":
+            # The punctuation rollover is a wholesale finalize; sentence mode
+            # replaces it with the sentence-aligned soft rollover.
+            return SentenceSegmentedStreamer(
+                self.model,
+                self.qwen_tokenizer,
+                config,
+                sentence_soft_steps=self.sentence_soft_steps,
+                sentence_rollover_margin_steps=self._sentence_margin_steps(),
+                **segment_kwargs,
+            )
+        return SegmentedCachedFullHypothesisStreamer(
+            self.model,
+            self.qwen_tokenizer,
+            config,
+            **segment_kwargs,
+        )
+
+    def _sentence_margin_steps(self) -> int:
+        step_ms = float(RealtimeAudioConfig.decoder_step_ms)
+        return int(round(self.sentence_rollover_margin_sec * 1000.0 / step_ms))
 
     def new_mel_extractor(self) -> StreamingMelExtractor:
         return StreamingMelExtractor(self.feature_extractor, sample_rate=self.SAMPLING_RATE)

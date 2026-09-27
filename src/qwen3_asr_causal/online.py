@@ -12,7 +12,9 @@ State machine per WebSocket session::
 Word timestamps are linear interpolations across each newly committed span
 (the streamer is text-only). Typical error is on the order of a second:
 fine for line/diarization alignment, not for precise word timing; use the
-``qwen3-vllm`` backend (ForcedAligner) when exact timestamps matter.
+``qwen3-vllm`` backend (ForcedAligner) when exact timestamps matter. In the
+sentence commit mode the span ends where the streamer located the committed
+sentence end in the audio, instead of at a fixed commit-lag estimate.
 
 Decode pacing is self-adjusting: each decode must "pay for itself", so the
 next one waits for at least ``_PACING x`` the previous decode duration in new
@@ -92,6 +94,9 @@ class Qwen3StreamingOnlineProcessor:
         self.end = 0.0
         self.audio_buffer = np.array([], dtype=np.float32)
         self.buffer = []
+        # Stream time of the current streamer's first audio sample. Sentence
+        # mode reports where committed text ends in streamer audio time.
+        self._streamer_origin: float | None = None
 
         self._emitted_words: list[str] = []
         self._any_word_emitted = False
@@ -105,6 +110,8 @@ class Qwen3StreamingOnlineProcessor:
 
     def insert_audio_chunk(self, audio: np.ndarray, audio_stream_end_time: float):
         self.end = audio_stream_end_time
+        if self._streamer_origin is None:
+            self._streamer_origin = audio_stream_end_time - len(audio) / self.SAMPLING_RATE
         self.audio_buffer = np.append(self.audio_buffer, audio.astype(np.float32))
 
     def process_iter(self, is_last=False) -> Tuple[List[ASRToken], float]:
@@ -118,7 +125,12 @@ class Qwen3StreamingOnlineProcessor:
             event = self._decode_pending()
             if event is None:
                 return [], self.end
-            return self._emit_committed(event["committed"], self.end), self.end
+            tokens = self._emit_committed(
+                event["committed"],
+                self.end,
+                audio_end=self._stream_time(event.get("committed_end_sec")),
+            )
+            return tokens, self.end
         except Exception as exc:
             logger.warning("[qwen3-streaming] process_iter error: %s", exc, exc_info=True)
             return [], self.end
@@ -247,15 +259,31 @@ class Qwen3StreamingOnlineProcessor:
         self._last_event = None
         self._last_decode_duration = 0.0
         self._last_commit_time = self.end
+        self._streamer_origin = None
+
+    def _stream_time(self, streamer_sec: float | None) -> float | None:
+        if streamer_sec is None or self._streamer_origin is None:
+            return None
+        return self._streamer_origin + float(streamer_sec)
 
     def _emit_committed(
-        self, committed_text: str, event_time: float, flush: bool = False
+        self,
+        committed_text: str,
+        event_time: float,
+        flush: bool = False,
+        audio_end: float | None = None,
     ) -> List[ASRToken]:
         """Diff global committed text against already-emitted words.
 
         Output is append-only: if a segment-rollover finalization revised
         already-emitted words, the revision is dropped (logged) and the new
         text becomes the diff baseline.
+
+        New words are spread linearly from the previous commit time to an
+        end time: ``audio_end`` when the streamer located the committed
+        text's end in the audio (sentence mode), else the event time minus
+        the estimated commit lag; a flush ends at the event time. Times are
+        clamped to stay monotonic and within the received audio.
         """
         target = committed_text.split()
         n_emitted = len(self._emitted_words)
@@ -278,7 +306,12 @@ class Qwen3StreamingOnlineProcessor:
             return []
 
         t0 = self._last_commit_time
-        t1 = event_time if flush else event_time - self._commit_lag_seconds
+        if flush:
+            t1 = event_time
+        elif audio_end is not None:
+            t1 = audio_end
+        else:
+            t1 = event_time - self._commit_lag_seconds
         t1 = min(max(t1, t0 + self._MIN_WORD_SECONDS * len(new_words)), self.end)
         if t1 <= t0:
             t1 = min(t0 + self._MIN_WORD_SECONDS * len(new_words), self.end)

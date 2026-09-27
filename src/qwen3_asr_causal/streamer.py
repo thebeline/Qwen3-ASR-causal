@@ -763,15 +763,19 @@ class SegmentedCachedFullHypothesisStreamer(CachedFullHypothesisStreamer):
         if getattr(self.state, "decoder", None) is not None:
             self.state.decoder = None
         self._trim_cached_audio_window()
-        if self.reset_encoder_on_rollover:
-            frames_seen = int(getattr(self.state.audio, "frames_seen", 0))
-            pending = getattr(self.state.audio, "mel_buffer", None)
-            self.state.audio = self.model.audio_encoder.init_state()
-            self.state.audio.frames_seen = frames_seen
-            if pending is not None:
-                self.state.audio.mel_buffer = pending
+        self._reset_encoder_for_rollover()
         self._reset_active_segment_state()
         return segment_final
+
+    def _reset_encoder_for_rollover(self) -> None:
+        if not self.reset_encoder_on_rollover:
+            return
+        frames_seen = int(getattr(self.state.audio, "frames_seen", 0))
+        pending = getattr(self.state.audio, "mel_buffer", None)
+        self.state.audio = self.model.audio_encoder.init_state()
+        self.state.audio.frames_seen = frames_seen
+        if pending is not None:
+            self.state.audio.mel_buffer = pending
 
     def _active_cached_steps(self) -> int:
         frame_hidden = getattr(self.state, "frame_hidden", None)
