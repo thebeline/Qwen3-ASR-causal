@@ -3,6 +3,10 @@
 Fork-local notes (github.com/thebeline/Qwen3-ASR-causal, branch `local`).
 This directory must never appear in an upstream PR.
 
+**Status:** Upstream PR parked 2026-10-08 (Mike); prefix-mode comparison used
+Chapterhouse settings, not upstream's hold 6 / stable 1 defaults — measure
+those before any PR.
+
 ## What it does
 
 Feature commit: `7f7d5f3 feat: sentence commit mode for qwen3-streaming`
@@ -43,22 +47,39 @@ Reference is Mike's offline Qwen3-ASR pipeline, so these figures are agreement
 with that pipeline, not error against human ground truth. 4027 reference words.
 RTX 4070 Ti.
 
+Every arm ran Chapterhouse's `run.sh` settings: `stable_iterations` 2, segment
+max 200 steps, keep-tail 25. The prefix arm ran upstream's code with those
+settings, not upstream's shipped defaults (hold 6 / stable 1).
+
 | arm | WER | S / D / I | commit p50 | commit p95 | revised words | RTF | peak VRAM |
 |---|---:|---|---:|---:|---:|---:|---:|
-| upstream default (prefix), 1 s chunks | 9.86% | 108 / 78 / 211 | 5.93 s | 14.51 s | 3 | 0.276 | 4358 MiB |
+| prefix (upstream code, Chapterhouse settings), 1 s chunks | 9.86% | 108 / 78 / 211 | 5.93 s | 14.51 s | 3 | 0.276 | 4358 MiB |
 | **sentence, 1 s chunks** | **7.30%** | 104 / 87 / 103 | **4.35 s** | **11.60 s** | 0 | 0.253 | 4358 MiB |
 | sentence, 2 s chunks | 7.95% | 99 / 96 / 125 | 5.59 s | 12.45 s | 0 | 0.152 | 4334 MiB |
-| sentence, 1 s chunks, packet 2 | 8.12% | 100 / 95 / 132 | 5.61 s | 12.39 s | 0 | 0.156 | 4334 MiB |
+| sentence, 1 s decode, 2 s packets | 8.12% | 100 / 95 / 132 | 5.61 s | 12.39 s | 0 | 0.156 | 4334 MiB |
 
 - The WER gain is almost all insertions (211 to 103): fewer duplicated words
   at segment seams.
+- 2 s cadence: sentence mode with 2 s chunks gives 7.95% WER and p50 5.59 s;
+  1 s decode fed 2 s packets gives 8.12% and 5.61 s. Against 1 s chunks that
+  is about +0.7 WER points and +1.2 s p50, for about 40% less compute
+  (RTF 0.253 to 0.152).
 - Both 1 s arms have the same 4 dropped runs (34 words, longest 3.6 s at
-  3672.5 s). The drops are not caused by the commit mode.
+  3672.5 s). The drops are not caused by the commit mode; Chapterhouse's
+  `docs/HANDOFF.md` traces most of them to the VAD gating soft speech.
 - "0 revised words" holds by design (commits are append-only), so it says
   nothing about corrections lost by committing early; see idea A.
 
 Source: `whisperlivekit/.scratch/assembly-eval/scores/window-3300-5100.json`
-in the Chapterhouse superproject (not committed). The full-file run is pending.
+in the Chapterhouse superproject (not committed).
+
+### Full file (2026-10-08)
+
+The whole recording (0-8963 s, 19640 reference words), sentence mode with
+1 s chunks, same settings and reference: **WER 4.18%** (S / D / I 338 / 226 /
+256), commit p50 **4.44 s**, p95 **11.4 s**, RTF 0.316, peak VRAM 4358 MiB,
+0 revised words. 6 dropped runs (45 words), longest 3.6 s at 3672.5 s. There
+is no full-file prefix run. Source: `scores/full-asr.json`, same directory.
 
 ## Open ideas
 
@@ -76,7 +97,7 @@ word counts can't show this because commits are append-only.
 
 Use counter A to choose between them.
 
-## Upstream PR plan
+## Upstream PR plan (parked 2026-10-08, see Status)
 
 1. Simplify first. `SentenceSegmentedStreamer` overrides `update_from_hypothesis`,
    `roll_segment`, `_reset_active_segment_state` and `finalize` from
